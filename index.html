@@ -25,14 +25,18 @@
 
 <h1>48-Hour Stock Tracker</h1>
 
-<div id="stocks"></div>
+<div id="stocks">
+  <p>Loading charts…</p>
+</div>
 
 <script>
 const tickers = ["AMZN", "PLTR", "SOFI", "NVDA"];
 
+// Use free CORS proxy
+const CORS_PROXY = "https://corsproxy.io/?";
+
 async function getStockData(ticker) {
-  // Yahoo Finance public endpoint (no API key)
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=30m&range=2d`;
+  const url = `${CORS_PROXY}https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=30m&range=2d`;
 
   const res = await fetch(url);
   const data = await res.json();
@@ -57,27 +61,36 @@ function createChart(canvasId, label, labels, data) {
         label: `${label} Price`,
         data: data,
         borderWidth: 2,
-        fill: false
+        fill: false,
+        borderColor: "#007bff"
       }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true }
+      },
+      scales: {
+        x: { display: false }
+      }
     }
   });
 }
 
 async function buildPage() {
   const container = document.getElementById("stocks");
+  container.innerHTML = ""; // Clear placeholder text
 
   for (let t of tickers) {
     const stock = await getStockData(t);
 
-    // Create card container
-    const div = document.createElement("div");
-    div.className = "stock-card";
-
     const latest = stock.prices[stock.prices.length - 1];
     const earlier = stock.prices[0];
     const pctChange = (((latest - earlier) / earlier) * 100).toFixed(2);
-
     const rating = pctChange > 0 ? "BUY" : "HOLD";
+
+    const div = document.createElement("div");
+    div.className = "stock-card";
 
     div.innerHTML = `
       <h2>${t}</h2>
@@ -93,7 +106,7 @@ async function buildPage() {
   }
 }
 
-buildPage();
+window.onload = buildPage;
 </script>
 
 </body>
