@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>48-Hour Stock Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 30px auto;
+    }
+    .stock-card {
+      margin-bottom: 40px;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    h1 {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<h1>48-Hour Stock Tracker</h1>
+
+<div id="stocks"></div>
+
+<script>
+const tickers = ["AMZN", "PLTR", "SOFI", "NVDA"];
+
+async function getStockData(ticker) {
+  // Yahoo Finance public endpoint (no API key)
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=30m&range=2d`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  const result = data.chart.result[0];
+  const timestamps = result.timestamp;
+  const prices = result.indicators.quote[0].close;
+
+  const readableTimes = timestamps.map(t => {
+    return new Date(t * 1000).toLocaleString();
+  });
+
+  return { ticker, timestamps: readableTimes, prices };
+}
+
+function createChart(canvasId, label, labels, data) {
+  new Chart(document.getElementById(canvasId), {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: `${label} Price`,
+        data: data,
+        borderWidth: 2,
+        fill: false
+      }]
+    }
+  });
+}
+
+async function buildPage() {
+  const container = document.getElementById("stocks");
+
+  for (let t of tickers) {
+    const stock = await getStockData(t);
+
+    // Create card container
+    const div = document.createElement("div");
+    div.className = "stock-card";
+
+    const latest = stock.prices[stock.prices.length - 1];
+    const earlier = stock.prices[0];
+    const pctChange = (((latest - earlier) / earlier) * 100).toFixed(2);
+
+    const rating = pctChange > 0 ? "BUY" : "HOLD";
+
+    div.innerHTML = `
+      <h2>${t}</h2>
+      <p><strong>Latest Price:</strong> $${latest.toFixed(2)}</p>
+      <p><strong>48h Change:</strong> ${pctChange}%</p>
+      <p><strong>Signal:</strong> ${rating}</p>
+      <canvas id="${t}-chart" width="800" height="300"></canvas>
+    `;
+
+    container.appendChild(div);
+
+    createChart(`${t}-chart`, t, stock.timestamps, stock.prices);
+  }
+}
+
+buildPage();
+</script>
+
+</body>
+</html>
